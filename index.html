@@ -1,134 +1,632 @@
+<!-- STREAMING_CHUNK: Defining document structure and head styles -->
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Eda ile Akşam Yemeği Planı</title>
-    <!-- Google Fonts & Tailwind CSS (Şık ve modern görünüm için) -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- PDF Oluşturma Kütüphanesi -->
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Elegant Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome for Premium Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf for generating gorgeous invitations -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        serif: ['Playfair Display', 'serif'],
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        roseGold: '#B76E79',
+                        luxuryRed: '#8C1D40',
+                        champagne: '#FDFBF7'
+                    }
+                }
+            }
+        }
+    </script>
     <style>
         body {
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: radial-gradient(circle at center, #FFF5F5 0%, #FEE2E2 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            overflow-x: hidden;
+        }
+        .luxury-gradient {
+            background: linear-gradient(135deg, #8C1D40 0%, #E11D48 100%);
+        }
+        .card-shadow {
+            box-shadow: 0 20px 40px rgba(225, 29, 72, 0.08);
+        }
+        /* Custom animations for fluid transitions */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        .step-transition {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        /* Floating hearts effect background */
+        .heart-float {
+            position: absolute;
+            font-size: 1.5rem;
+            color: rgba(225, 29, 72, 0.15);
+            animation: floatUp 8s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes floatUp {
+            0% { transform: translateY(105vh) rotate(0deg); opacity: 0; }
+            10% { opacity: 1; }
+            90% { opacity: 1; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
         }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-center justify-center p-4 relative">
 
-    <div id="form-container" class="bg-white p-8 rounded-2xl shadow-xl max-w-xl w-full border border-gray-100 transition-all duration-300">
-        <!-- Başlık -->
-        <div class="text-center mb-8">
-            <h1 class="text-3xl font-serif text-rose-600 font-bold mb-2">Küçük Bir Akşam Yemeği Planı</h1>
-            <p class="text-gray-500 text-sm">Eda Hanım, harika bir akşam için tercihlerinizi belirtebilir misiniz?</p>
+    <!-- STREAMING_CHUNK: Dynamic floating hearts decoration -->
+    <div id="hearts-container" class="absolute inset-0 overflow-hidden z-0 pointer-events-none"></div>
+
+    <!-- Admin Panel Access (Subtle Heart Lock Icon) -->
+    <button onclick="promptAdmin()" class="absolute top-4 right-4 z-50 text-rose-300 hover:text-rose-600 transition-colors duration-300 p-2 text-xl" title="Yönetici Paneli">
+        <i class="fa-solid fa-heart-circle-lock"></i>
+    </button>
+
+    <!-- MAIN APP CANVAS CONTAINER -->
+    <main class="w-full max-w-lg bg-white/80 backdrop-blur-md border border-rose-100 rounded-3xl p-6 md:p-8 card-shadow relative z-10 overflow-hidden min-h-[550px] flex flex-col justify-between">
+        
+        <!-- STREAMING_CHUNK: Step Indicator dots -->
+        <div id="step-indicator" class="hidden flex justify-center items-center space-x-2 mb-6">
+            <span class="step-dot w-2 h-2 rounded-full bg-rose-200 transition-all duration-300" id="dot-1"></span>
+            <span class="step-dot w-2 h-2 rounded-full bg-rose-200 transition-all duration-300" id="dot-2"></span>
+            <span class="step-dot w-2 h-2 rounded-full bg-rose-200 transition-all duration-300" id="dot-3"></span>
+            <span class="step-dot w-2 h-2 rounded-full bg-rose-200 transition-all duration-300" id="dot-4"></span>
         </div>
 
-        <form id="dinner-form" class="space-y-6">
-            <!-- 1. Yemek Tercihi -->
-            <div>
-                <label class="block text-gray-700 font-medium mb-2">1. Nasıl bir akşam yemeği tercih edersiniz?</label>
-                <select id="yemekTercihi" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" required>
-                    <option value="" disabled selected>Seçiniz...</option>
-                    <option value="İtalyan Mutfağı (Makarna & Pizza)">İtalyan Mutfağı 🍕</option>
-                    <option value="Dünya Mutfağı / Steakhouse">Dünya Mutfağı & Steak 🥩</option>
-                    <option value="Deniz Mahsulleri">Deniz Mahsulleri 🐟</option>
-                    <option value="Uzak Doğu (Suşi / Asya)">Uzak Doğu 🥢</option>
-                    <option value="Geleneksel Türk Mutfağı / Ocakbaşı">Geleneksel Türk Mutfağı / Ocakbaşı 🍢</option>
-                </select>
+        <!-- SCREEN 1: WELCOME SCREEN -->
+        <div id="screen-welcome" class="app-screen animate-fade-in flex flex-col items-center text-center justify-center my-auto">
+            <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6 shadow-inner animate-pulse">
+                <i class="fa-solid fa-envelope-open-text text-3xl text-rose-600"></i>
             </div>
+            <h1 class="font-serif text-3xl md:text-4xl text-rose-950 font-bold mb-4 tracking-tight">Eda Hanım,</h1>
+            <p class="font-serif italic text-lg text-rose-800 mb-2">Sizinle harika bir akşam yemeği planlamak istiyorum.</p>
+            <p class="text-gray-500 text-sm max-w-sm mb-8 leading-relaxed">
+                Her şeyin kusursuz ve tamamen sizin konforunuza uygun olması için küçük birkaç tercihinizi belirtebilir misiniz?
+            </p>
+            <button onclick="startSurvey()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-4 px-8 rounded-2xl shadow-lg shadow-rose-200 transition-all duration-300 transform hover:-translate-y-0.5">
+                Daveti Detaylandır <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+        </div>
 
-            <!-- 2. Ulaşım / Araba -->
+        <!-- SCREEN 2: COOKING TYPE (STEP 1) -->
+        <div id="screen-step1" class="app-screen hidden animate-fade-in flex-1 flex flex-col justify-between">
             <div>
-                <label class="block text-gray-700 font-medium mb-2">2. Sizi araçla evinizden/belirttiğiniz bir konumdan almamı ister misiniz?</label>
-                <div class="flex gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="araba" value="Evet, lütfen." class="text-rose-600 focus:ring-rose-500" required>
-                        <span>Evet, harika olur.</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                        <input type="radio" name="araba" value="Hayır, kendim gelebilirim." class="text-rose-600 focus:ring-rose-500">
-                        <span>Hayır, kendim gelebilirim.</span>
-                    </label>
+                <h2 class="font-serif text-2xl text-rose-950 font-bold mb-2">1. Akşam Yemeği Tercihiniz</h2>
+                <p class="text-gray-500 text-sm mb-6">Nasıl bir mutfak ve ambiyans istersiniz?</p>
+                
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="selectOption('yemek', 'İtalyan Mutfağı 🍕')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-amber-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">🍕</span>
+                        <div>
+                            <p class="font-bold text-gray-800">İtalyan Mutfağı</p>
+                            <p class="text-xs text-gray-400">Şık makarnalar, pizzalar ve loş mum ışığı</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('yemek', 'Dünya Mutfağı & Steak 🥩')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">🥩</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Dünya Mutfağı & Steak</p>
+                            <p class="text-xs text-gray-400">Zengin menü ve şık gastronomi deneyimi</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('yemek', 'Uzak Doğu Mutfağı 🍣')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">🍣</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Uzak Doğu Mutfağı</p>
+                            <p class="text-xs text-gray-400">Suşi ve mistik asya esintileri</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('yemek', 'Deniz Mahsulleri 🐟')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">🐟</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Deniz Mahsulleri</p>
+                            <p class="text-xs text-gray-400">Taze mezeler, taze balık ve huzurlu bir hava</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between">
+                <button onclick="goToWelcome()" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2">Geri</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: RIDE (STEP 2) -->
+        <div id="screen-step2" class="app-screen hidden animate-fade-in flex-1 flex flex-col justify-between">
+            <div>
+                <h2 class="font-serif text-2xl text-rose-950 font-bold mb-2">2. Ulaşım Tercihiniz</h2>
+                <p class="text-gray-500 text-sm mb-8">Sizi özel araçla adresinizden almamı ister misiniz?</p>
+                
+                <div class="grid grid-cols-1 gap-4">
+                    <button onclick="selectOption('ulasim', 'Evet, lütfen. 🚗')" class="option-card flex items-center p-5 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform text-rose-600">
+                            <i class="fa-solid fa-car"></i>
+                        </span>
+                        <div>
+                            <p class="font-bold text-gray-800">Evet, harika olur</p>
+                            <p class="text-xs text-gray-400">Adresinizden alınış ve dönüş konforu</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('ulasim', 'Hayır, kendim gelebilirim. 🚶')" class="option-card flex items-center p-5 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform text-gray-500">
+                            <i class="fa-solid fa-location-dot"></i>
+                        </span>
+                        <div>
+                            <p class="font-bold text-gray-800">Hayır, kendim gelebilirim</p>
+                            <p class="text-xs text-gray-400">Restoranda buluşalım</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between">
+                <button onclick="prevStep(1)" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2">Geri</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 4: ALLERGY (STEP 3) -->
+        <div id="screen-step3" class="app-screen hidden animate-fade-in flex-1 flex flex-col justify-between">
+            <div>
+                <h2 class="font-serif text-2xl text-rose-950 font-bold mb-2">3. Özel Hassasiyetleriniz</h2>
+                <p class="text-gray-500 text-sm mb-6">Sağlığınız çok değerli. Alerjiniz veya masada bulunmasını istemediğiniz malzemeler var mı?</p>
+                
+                <textarea id="input-alerji" rows="4" class="w-full p-4 border border-rose-100 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500 text-gray-800 placeholder-gray-400 card-shadow bg-rose-50/10" placeholder="Örn: Kabuklu deniz canlısı alerjisi, mantar yemem vb. (Yoksa boş bırakabilirsiniz)"></textarea>
+            </div>
+            <div class="mt-6 flex justify-between items-center">
+                <button onclick="prevStep(2)" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2">Geri</button>
+                <button onclick="saveAllergyAndContinue()" class="bg-rose-600 hover:bg-rose-700 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition-all">Devam Et <i class="fa-solid fa-chevron-right ml-2"></i></button>
+            </div>
+        </div>
+
+        <!-- SCREEN 5: DRESS CODE (STEP 4) -->
+        <div id="screen-step4" class="app-screen hidden animate-fade-in flex-1 flex flex-col justify-between">
+            <div>
+                <h2 class="font-serif text-2xl text-rose-950 font-bold mb-2">4. Giyim Konsepti</h2>
+                <p class="text-gray-500 text-sm mb-6">Mekanın atmosferini giyim tercihinize göre belirleyelim.</p>
+                
+                <div class="grid grid-cols-1 gap-3">
+                    <button onclick="selectOption('giyim', 'Şık & Elegant 💃')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">💃</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Şık & Elegant</p>
+                            <p class="text-xs text-gray-400">Şık elbiseler, takımlar ve prestijli bir ambiyans</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('giyim', 'Smart Casual 🧥')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">🧥</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Smart Casual</p>
+                            <p class="text-xs text-gray-400">Konforlu, rahat ama özenli bir tarz</p>
+                        </div>
+                    </button>
+                    <button onclick="selectOption('giyim', 'Rahat & Spor 👟')" class="option-card flex items-center p-4 border border-rose-100 rounded-2xl hover:bg-rose-50/50 hover:border-rose-300 text-left transition-all duration-200 group">
+                        <span class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-2xl mr-4 group-hover:scale-110 transition-transform">👟</span>
+                        <div>
+                            <p class="font-bold text-gray-800">Rahat & Spor</p>
+                            <p class="text-xs text-gray-400">Samimi ve tamamen özgür hissedeceğiniz bir ortam</p>
+                        </div>
+                    </button>
+                </div>
+            </div>
+            <div class="mt-6 flex justify-between">
+                <button onclick="prevStep(3)" class="text-gray-400 hover:text-gray-600 font-medium px-4 py-2">Geri</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 6: SUMMARY & DOWNLOAD PDF -->
+        <div id="screen-summary" class="app-screen hidden animate-fade-in flex flex-col justify-between flex-1">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <h2 class="font-serif text-2xl text-rose-950 font-bold mb-1">Mükemmel Plan!</h2>
+                <p class="text-gray-400 text-xs mb-6">Her şey hazırlandı. Tercihlerinizin özeti:</p>
+                
+                <div class="bg-rose-50/30 rounded-2xl p-4 border border-rose-100 text-left space-y-3 mb-6">
+                    <div class="flex justify-between border-b border-rose-100 pb-2 text-sm">
+                        <span class="text-gray-400 font-medium">Yemek Konsepti:</span>
+                        <span id="summary-yemek" class="text-rose-950 font-bold"></span>
+                    </div>
+                    <div class="flex justify-between border-b border-rose-100 pb-2 text-sm">
+                        <span class="text-gray-400 font-medium">Araç Transferi:</span>
+                        <span id="summary-ulasim" class="text-rose-950 font-bold"></span>
+                    </div>
+                    <div class="flex justify-between border-b border-rose-100 pb-2 text-sm">
+                        <span class="text-gray-400 font-medium">Özel Hassasiyetler:</span>
+                        <span id="summary-alerji" class="text-rose-950 font-semibold truncate max-w-[200px]"></span>
+                    </div>
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-400 font-medium">Giyim Tarzı:</span>
+                        <span id="summary-giyim" class="text-rose-950 font-bold"></span>
+                    </div>
                 </div>
             </div>
 
-            <!-- 3. Alerji / Sevilmeyen Yemek -->
-            <div>
-                <label class="block text-gray-700 font-medium mb-2" for="alerji">3. Alerjiniz olan veya kesinlikle sevmediğiniz bir yemek var mı?</label>
-                <textarea id="alerji" rows="2" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" placeholder="Örn: Mantar alerjim var, kereviz sevmem vb. (Yoksa boş bırakabilirsiniz)"></textarea>
+            <div class="space-y-3">
+                <button id="btn-save" onclick="handleSubmitAndDownload()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-semibold py-4 px-6 rounded-2xl shadow-lg transition-all flex items-center justify-center">
+                    <span id="btn-save-text">Planı Onayla & Davetiyeyi Al</span>
+                    <i class="fa-solid fa-chevron-right ml-2"></i>
+                </button>
             </div>
+        </div>
 
-            <!-- 4. Giyim Tarzı -->
-            <div>
-                <label class="block text-gray-700 font-medium mb-2">4. Restoran konseptini ayarlayabilmemiz için giyim tarzı tercihiniz:</label>
-                <select id="giyim" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" required>
-                    <option value="" disabled selected>Seçiniz...</option>
-                    <option value="Şık / Elegant (Takım elbise, şık bir elbise)">Şık / Elegant ✨</option>
-                    <option value="Smart Casual (Rahat ama özenli)">Smart Casual 🧥</option>
-                    <option value="Tamamen Spor / Spor-Şık">Rahat / Spor 👟</option>
-                </select>
+        <!-- SCREEN 7: THANK YOU SCREEN -->
+        <div id="screen-thankyou" class="app-screen hidden animate-fade-in flex flex-col items-center justify-center text-center my-auto">
+            <div class="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-600 animate-bounce">
+                <i class="fa-solid fa-heart text-4xl"></i>
             </div>
-
-            <!-- Gönder Butonu -->
-            <button type="button" onclick="generatePDF()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 mt-4">
-                Planı Tamamla & PDF İndir 📄
+            <h1 class="font-serif text-3xl text-rose-950 font-bold mb-3">Harika Bir Akşam Olacak!</h1>
+            <p class="text-gray-500 text-sm max-w-sm mb-6 leading-relaxed">
+                Tercihleriniz başarıyla bana ulaştı. Özel hazırlanan davetiyeniz indirildi. Bunu benimle paylaşabilirsiniz.
+            </p>
+            <p class="font-serif italic text-lg text-rose-800 mb-8">Heyecanla bekliyorum...</p>
+            <button onclick="window.location.reload()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold py-3 px-6 rounded-2xl transition-all">
+                Cevapları Düzenle <i class="fa-solid fa-arrows-rotate ml-2"></i>
             </button>
-        </form>
+        </div>
 
-        <!-- Gizli PDF Şablonu (Sadece PDF oluşturulurken okunacak) -->
-        <div id="pdf-template" class="hidden p-8 bg-white" style="font-family: 'Arial', sans-serif;">
-            <h1 style="color: #e11d48; text-align: center; font-size: 24px; margin-bottom: 20px;">Eda & Akşam Yemeği Programı</h1>
-            <hr style="border: 1px solid #f3f4f6; margin-bottom: 20px;">
-            <p style="margin-bottom: 12px;"><strong>🍽️ Yemek Tercihi:</strong> <span id="pdf-yemek"></span></p>
-            <p style="margin-bottom: 12px;"><strong>🚗 Araçla Alınma Durumu:</strong> <span id="pdf-araba"></span></p>
-            <p style="margin-bottom: 12px;"><strong>⚠️ Alerji / Sevilmeyenler:</strong> <span id="pdf-alerji"></span></p>
-            <p style="margin-bottom: 12px;"><strong>✨ Giyim Konsepti:</strong> <span id="pdf-giyim"></span></p>
-            <hr style="border: 1px solid #f3f4f6; margin-top: 20px; margin-bottom: 20px;">
-            <p style="text-align: center; color: #6b7280; font-size: 12px;">Bu harika akşamda görüşmek üzere!</p>
+        <!-- SCREEN 8: ADMIN DASHBOARD (HIDDEN) -->
+        <div id="screen-admin" class="app-screen hidden animate-fade-in flex-1 flex flex-col justify-between">
+            <div>
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="font-serif text-2xl text-rose-950 font-bold">Gelen Yanıtlar</h2>
+                    <button onclick="goToWelcome()" class="text-gray-400 hover:text-rose-600"><i class="fa-solid fa-circle-xmark text-2xl"></i></button>
+                </div>
+                
+                <div id="admin-loading" class="text-center py-10 text-rose-400">
+                    <i class="fa-solid fa-spinner animate-spin text-3xl mb-2"></i>
+                    <p class="text-sm">Yükleniyor...</p>
+                </div>
+
+                <div id="admin-content" class="hidden space-y-4 max-h-[380px] overflow-y-auto pr-1">
+                    <!-- Dynamic database results inserted here -->
+                </div>
+            </div>
+            <div class="mt-4 pt-4 border-t border-rose-100 text-center">
+                <p class="text-xs text-rose-400">Eda & Akşam Yemeği Programı Veri Tabanı</p>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- STREAMING_CHUNK: Hidden template for generating PDF Invitation -->
+    <div class="hidden">
+        <div id="pdf-invitation" class="p-12 bg-[#FDFBF7] text-[#4A1521] relative border-8 border-double border-[#8C1D40] w-[600px] font-sans" style="background-color: #FDFBF7;">
+            <div class="text-center">
+                <span class="text-rose-500 text-3xl">⚜️</span>
+                <h1 class="font-serif text-3xl font-bold tracking-widest text-[#8C1D40] uppercase mt-4 mb-2" style="font-family: 'Playfair Display', serif;">Özel Akşam Yemeği Davetiyesi</h1>
+                <p class="italic text-gray-500 text-sm mb-8" style="font-family: 'Playfair Display', serif;">Eda Hanım'ın Onuruna Hazırlanan Detaylar</p>
+                
+                <div class="space-y-6 text-left my-8 border-t border-b border-rose-200/50 py-8">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 uppercase text-xs tracking-wider">Yemek Konsepti</span>
+                        <span id="pdf-yemek" class="font-serif text-lg font-bold text-[#8C1D40]"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 uppercase text-xs tracking-wider">Özel Araç Transferi</span>
+                        <span id="pdf-ulasim" class="font-serif text-lg font-bold text-[#8C1D40]"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 uppercase text-xs tracking-wider">Hassasiyet / Alerji</span>
+                        <span id="pdf-alerji" class="font-serif text-md text-[#8C1D40]"></span>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-400 uppercase text-xs tracking-wider">Giyim Konsepti</span>
+                        <span id="pdf-giyim" class="font-serif text-lg font-bold text-[#8C1D40]"></span>
+                    </div>
+                </div>
+
+                <div class="mt-8">
+                    <p class="font-serif italic text-lg text-rose-700" style="font-family: 'Playfair Display', serif;">Bu harika buluşmada görüşmek üzere...</p>
+                    <div class="mt-6 text-xs text-gray-400">Şık ve unutulmaz bir akşam yemeği anısı.</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <script>
-        function generatePDF() {
-            // Form kontrolü
-            const form = document.getElementById('dinner-form');
-            if (!form.checkValidity()) {
-                alert('Lütfen tüm zorunlu alanları doldurun.');
-                form.reportValidity();
-                return;
-            }
+    <!-- STREAMING_CHUNK: Setting up Firebase & UI Logic -->
+    <script type="module">
+        // Firebase modules import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-            // Değerleri al
-            const yemek = document.getElementById('yemekTercihi').value;
-            const araba = document.querySelector('input[name="araba"]:checked')?.value || "Belirtilmedi";
-            const alerji = document.getElementById('alerji').value || "Yok";
-            const giyim = document.getElementById('giyim').value;
+        // Global state variable
+        const appState = {
+            yemek: '',
+            ulasim: '',
+            alerji: '',
+            giyim: ''
+        };
 
-            // PDF Şablonuna yazdır
-            document.getElementById('pdf-yemek').innerText = yemek;
-            document.getElementById('pdf-araba').innerText = araba;
-            document.getElementById('pdf-alerji').innerText = alerji;
-            document.getElementById('pdf-giyim').innerText = giyim;
-
-            // PDF Seçenekleri
-            const element = document.getElementById('pdf-template');
-            element.classList.remove('hidden'); // PDF alırken görünür yapmalıyız
-
-            const opt = {
-                margin:       10,
-                filename:     'Eda_Yemek_Plani.pdf',
-                image:        { type: 'jpeg', quality: 0.98 },
-                html2canvas:  { scale: 2 },
-                jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' } // Şık dursun diye A5 boyutu
+        // Firebase Configuration
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'eda-dinner-planner-99';
+        
+        // Dynamic fallback firebase config for smooth deployment
+        const firebaseConfig = typeof __firebase_config !== 'undefined' 
+            ? JSON.parse(__firebase_config) 
+            : {
+                apiKey: "AIzaSyAsFakeKeyForStandAloneSandbox123",
+                authDomain: "eda-dinner.firebaseapp.com",
+                projectId: "eda-dinner",
+                storageBucket: "eda-dinner.appspot.com",
+                messagingSenderId: "123456789",
+                appId: "1:12345:web:123"
             };
 
-            // PDF üret ve indir
-            html2pdf().set(opt).from(element).save().then(() => {
-                element.classList.add('hidden'); // Tekrar gizle
-                alert('Harika! Plan PDF olarak indirildi. Bunu WhatsApp üzerinden benimle paylaşabilirsiniz.');
+        // Initialize Firebase
+        let app, db, auth;
+        let isFirebaseActive = false;
+
+        try {
+            app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            // Authentication
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+            isFirebaseActive = true;
+            console.log("Firebase initialized successfully.");
+        } catch (error) {
+            console.warn("Firebase simulation mode enabled. (Offline fallback database actively running)");
+        }
+
+        // --- DECORATIVE: Floating hearts generator ---
+        function createHeart() {
+            const container = document.getElementById('hearts-container');
+            if(!container) return;
+            const heart = document.createElement('i');
+            heart.classList.add('fa-solid', 'fa-heart', 'heart-float');
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animationDuration = Math.random() * 4 + 6 + 's'; // 6-10 seconds
+            heart.style.fontSize = Math.random() * 1.5 + 0.5 + 'rem';
+            heart.style.opacity = Math.random() * 0.4 + 0.1;
+            container.appendChild(heart);
+            setTimeout(() => { heart.remove(); }, 10000);
+        }
+        setInterval(createHeart, 800);
+
+        // --- NAVIGATION LOGIC ---
+        window.startSurvey = function() {
+            document.getElementById('step-indicator').classList.remove('hidden');
+            showScreen('screen-step1');
+            updateIndicator(1);
+        }
+
+        window.goToWelcome = function() {
+            document.getElementById('step-indicator').classList.add('hidden');
+            showScreen('screen-welcome');
+        }
+
+        window.prevStep = function(stepNum) {
+            showScreen(`screen-step${stepNum}`);
+            updateIndicator(stepNum);
+        }
+
+        // Save selected option and animate to the next screen
+        window.selectOption = function(category, value) {
+            appState[category] = value;
+            
+            if (category === 'yemek') {
+                showScreen('screen-step2');
+                updateIndicator(2);
+            } else if (category === 'ulasim') {
+                showScreen('screen-step3');
+                updateIndicator(3);
+            } else if (category === 'giyim') {
+                // Show summary screen
+                document.getElementById('summary-yemek').innerText = appState.yemek;
+                document.getElementById('summary-ulasim').innerText = appState.ulasim;
+                document.getElementById('summary-alerji').innerText = appState.alerji ? appState.alerji : 'Hassasiyet bulunmuyor';
+                document.getElementById('summary-giyim').innerText = appState.giyim;
+
+                document.getElementById('step-indicator').classList.add('hidden');
+                showScreen('screen-summary');
+            }
+        }
+
+        // Helper for step indicators
+        function updateIndicator(step) {
+            document.querySelectorAll('.step-dot').forEach((dot, index) => {
+                if (index < step) {
+                    dot.classList.remove('bg-rose-200');
+                    dot.classList.add('bg-rose-600', 'w-4');
+                } else {
+                    dot.classList.remove('bg-rose-600', 'w-4');
+                    dot.classList.add('bg-rose-200');
+                }
             });
+        }
+
+        window.saveAllergyAndContinue = function() {
+            appState.alerji = document.getElementById('input-alerji').value.trim();
+            showScreen('screen-step4');
+            updateIndicator(4);
+        }
+
+        function showScreen(screenId) {
+            document.querySelectorAll('.app-screen').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            document.getElementById(screenId).classList.remove('hidden');
+        }
+
+        // --- SAVE DATA & GENERATE PDF GUEST WORKFLOW ---
+        window.handleSubmitAndDownload = async function() {
+            const btn = document.getElementById('btn-save');
+            const btnText = document.getElementById('btn-save-text');
+            btnText.innerHTML = `<i class="fa-solid fa-heart animate-pulse mr-2"></i> Onaylanıyor...`;
+            btn.disabled = true;
+
+            // 1. Save to Database (Firestore or LocalStorage)
+            const submission = {
+                yemek: appState.yemek,
+                ulasim: appState.ulasim,
+                alerji: appState.alerji || "Belirtilmedi",
+                giyim: appState.giyim,
+                tarih: new Date().toLocaleString('tr-TR')
+            };
+
+            if (isFirebaseActive) {
+                try {
+                    // MUST adhere to Rule 1 path guidelines: /artifacts/{appId}/public/data/responses
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'responses');
+                    await addDoc(colRef, submission);
+                } catch (error) {
+                    console.error("Firestore save failed:", error);
+                }
+            }
+            
+            // Backup/alternative in LocalStorage
+            let localList = JSON.parse(localStorage.getItem('eda_dinner_submissions') || '[]');
+            localList.push(submission);
+            localStorage.setItem('eda_dinner_submissions', JSON.stringify(localList));
+
+            // 2. Setup PDF template and Generate PDF
+            document.getElementById('pdf-yemek').innerText = appState.yemek;
+            document.getElementById('pdf-ulasim').innerText = appState.ulasim;
+            document.getElementById('pdf-alerji').innerText = appState.alerji || "Hassasiyet Bulunmuyor";
+            document.getElementById('pdf-giyim').innerText = appState.giyim;
+
+            const element = document.getElementById('pdf-invitation');
+            
+            const opt = {
+                margin:       10,
+                filename:     'Eda_Aksam_Yemegi_Davetiyesi.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } catch (e) {
+                console.error("PDF download failed:", e);
+            }
+
+            // Move to success screen
+            showScreen('screen-thankyou');
+        }
+
+        // --- ADMIN SYSTEM & PANEL VIEWER ---
+        window.promptAdmin = function() {
+            const pin = prompt("Yönetici Panelini açmak için lütfen erişim şifresini girin:\n(Varsayılan Şifre: eda)");
+            if (pin === "eda") {
+                loadAdminData();
+            } else if (pin !== null) {
+                alert("Hatalı Şifre. Lütfen tekrar deneyin.");
+            }
+        }
+
+        async function loadAdminData() {
+            document.getElementById('step-indicator').classList.add('hidden');
+            showScreen('screen-admin');
+            
+            const loadingEl = document.getElementById('admin-loading');
+            const contentEl = document.getElementById('admin-content');
+            loadingEl.classList.remove('hidden');
+            contentEl.classList.add('hidden');
+
+            let allDocs = [];
+
+            if (isFirebaseActive) {
+                try {
+                    const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'responses');
+                    const snapshot = await getDocs(colRef);
+                    snapshot.forEach(doc => {
+                        allDocs.push({ id: doc.id, ...doc.data() });
+                    });
+                } catch (err) {
+                    console.error("Could not fetch remote DB responses", err);
+                }
+            }
+
+            // Always merge or fallback on LocalStorage submissions so user never loses test submissions
+            const localSubmissions = JSON.parse(localStorage.getItem('eda_dinner_submissions') || '[]');
+            localSubmissions.forEach((item, index) => {
+                // Ensure no duplicates shown if we have both
+                if (!allDocs.some(d => d.tarih === item.tarih)) {
+                    allDocs.push({ id: `local-${index}`, ...item, isLocal: true });
+                }
+            });
+
+            // Sort by date descending
+            allDocs.sort((a,b) => b.tarih.localeCompare(a.tarih));
+
+            // Render documents
+            contentEl.innerHTML = '';
+            if (allDocs.length === 0) {
+                contentEl.innerHTML = `
+                    <div class="text-center py-10 text-gray-400">
+                        <i class="fa-solid fa-heart-crack text-3xl mb-2"></i>
+                        <p class="text-sm">Henüz doldurulmuş bir plan bulunmuyor.</p>
+                    </div>
+                `;
+            } else {
+                allDocs.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = "bg-rose-50/50 border border-rose-100 rounded-2xl p-4 relative space-y-2 text-sm";
+                    card.innerHTML = `
+                        <div class="flex justify-between items-start">
+                            <span class="text-xs text-rose-500 font-semibold bg-rose-100/50 py-1 px-2 rounded-lg">${item.tarih}</span>
+                            <button onclick="deleteResponse('${item.id}', ${item.isLocal ? 'true' : 'false'})" class="text-rose-300 hover:text-rose-600 transition-colors"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                        <div class="space-y-1 text-gray-700">
+                            <p><strong>🍽️ Yemek:</strong> ${item.yemek}</p>
+                            <p><strong>🚗 Ulaşım:</strong> ${item.ulasim}</p>
+                            <p><strong>⚠️ Alerji:</strong> ${item.alerji}</p>
+                            <p><strong>✨ Giyim:</strong> ${item.giyim}</p>
+                        </div>
+                    `;
+                    contentEl.appendChild(card);
+                });
+            }
+
+            loadingEl.classList.add('hidden');
+            contentEl.classList.remove('hidden');
+        }
+
+        window.deleteResponse = async function(id, isLocal) {
+            if (!confirm("Bu yanıtı silmek istediğinizden emin misiniz?")) return;
+
+            if (isLocal) {
+                let localSubmissions = JSON.parse(localStorage.getItem('eda_dinner_submissions') || '[]');
+                const idx = parseInt(id.replace('local-', ''));
+                localSubmissions.splice(idx, 1);
+                localStorage.setItem('eda_dinner_submissions', JSON.stringify(localSubmissions));
+            } else if (isFirebaseActive) {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'responses', id);
+                    await deleteDoc(docRef);
+                } catch (e) {
+                    console.error("Firebase deletion failed:", e);
+                }
+            }
+
+            alert("Yanıt başarıyla silindi.");
+            loadAdminData(); // Refresh list
         }
     </script>
 </body>
 </html>
+```eof
