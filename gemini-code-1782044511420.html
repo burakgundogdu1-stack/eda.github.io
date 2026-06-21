@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eda ile Akşam Yemeği Planı</title>
+    <!-- Google Fonts & Tailwind CSS (Şık ve modern görünüm için) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- PDF Oluşturma Kütüphanesi -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div id="form-container" class="bg-white p-8 rounded-2xl shadow-xl max-w-xl w-full border border-gray-100 transition-all duration-300">
+        <!-- Başlık -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-serif text-rose-600 font-bold mb-2">Küçük Bir Akşam Yemeği Planı</h1>
+            <p class="text-gray-500 text-sm">Eda Hanım, harika bir akşam için tercihlerinizi belirtebilir misiniz?</p>
+        </div>
+
+        <form id="dinner-form" class="space-y-6">
+            <!-- 1. Yemek Tercihi -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">1. Nasıl bir akşam yemeği tercih edersiniz?</label>
+                <select id="yemekTercihi" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" required>
+                    <option value="" disabled selected>Seçiniz...</option>
+                    <option value="İtalyan Mutfağı (Makarna & Pizza)">İtalyan Mutfağı 🍕</option>
+                    <option value="Dünya Mutfağı / Steakhouse">Dünya Mutfağı & Steak 🥩</option>
+                    <option value="Deniz Mahsulleri">Deniz Mahsulleri 🐟</option>
+                    <option value="Uzak Doğu (Suşi / Asya)">Uzak Doğu 🥢</option>
+                    <option value="Geleneksel Türk Mutfağı / Ocakbaşı">Geleneksel Türk Mutfağı / Ocakbaşı 🍢</option>
+                </select>
+            </div>
+
+            <!-- 2. Ulaşım / Araba -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">2. Sizi araçla evinizden/belirttiğiniz bir konumdan almamı ister misiniz?</label>
+                <div class="flex gap-4">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="araba" value="Evet, lütfen." class="text-rose-600 focus:ring-rose-500" required>
+                        <span>Evet, harika olur.</span>
+                    </label>
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="radio" name="araba" value="Hayır, kendim gelebilirim." class="text-rose-600 focus:ring-rose-500">
+                        <span>Hayır, kendim gelebilirim.</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 3. Alerji / Sevilmeyen Yemek -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2" for="alerji">3. Alerjiniz olan veya kesinlikle sevmediğiniz bir yemek var mı?</label>
+                <textarea id="alerji" rows="2" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" placeholder="Örn: Mantar alerjim var, kereviz sevmem vb. (Yoksa boş bırakabilirsiniz)"></textarea>
+            </div>
+
+            <!-- 4. Giyim Tarzı -->
+            <div>
+                <label class="block text-gray-700 font-medium mb-2">4. Restoran konseptini ayarlayabilmemiz için giyim tarzı tercihiniz:</label>
+                <select id="giyim" class="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:border-rose-500" required>
+                    <option value="" disabled selected>Seçiniz...</option>
+                    <option value="Şık / Elegant (Takım elbise, şık bir elbise)">Şık / Elegant ✨</option>
+                    <option value="Smart Casual (Rahat ama özenli)">Smart Casual 🧥</option>
+                    <option value="Tamamen Spor / Spor-Şık">Rahat / Spor 👟</option>
+                </select>
+            </div>
+
+            <!-- Gönder Butonu -->
+            <button type="button" onclick="generatePDF()" class="w-full bg-rose-600 hover:bg-rose-700 text-white font-bold py-3 px-4 rounded-lg shadow-md hover:shadow-lg transition-all duration-200 mt-4">
+                Planı Tamamla & PDF İndir 📄
+            </button>
+        </form>
+
+        <!-- Gizli PDF Şablonu (Sadece PDF oluşturulurken okunacak) -->
+        <div id="pdf-template" class="hidden p-8 bg-white" style="font-family: 'Arial', sans-serif;">
+            <h1 style="color: #e11d48; text-align: center; font-size: 24px; margin-bottom: 20px;">Eda & Akşam Yemeği Programı</h1>
+            <hr style="border: 1px solid #f3f4f6; margin-bottom: 20px;">
+            <p style="margin-bottom: 12px;"><strong>🍽️ Yemek Tercihi:</strong> <span id="pdf-yemek"></span></p>
+            <p style="margin-bottom: 12px;"><strong>🚗 Araçla Alınma Durumu:</strong> <span id="pdf-araba"></span></p>
+            <p style="margin-bottom: 12px;"><strong>⚠️ Alerji / Sevilmeyenler:</strong> <span id="pdf-alerji"></span></p>
+            <p style="margin-bottom: 12px;"><strong>✨ Giyim Konsepti:</strong> <span id="pdf-giyim"></span></p>
+            <hr style="border: 1px solid #f3f4f6; margin-top: 20px; margin-bottom: 20px;">
+            <p style="text-align: center; color: #6b7280; font-size: 12px;">Bu harika akşamda görüşmek üzere!</p>
+        </div>
+    </div>
+
+    <script>
+        function generatePDF() {
+            // Form kontrolü
+            const form = document.getElementById('dinner-form');
+            if (!form.checkValidity()) {
+                alert('Lütfen tüm zorunlu alanları doldurun.');
+                form.reportValidity();
+                return;
+            }
+
+            // Değerleri al
+            const yemek = document.getElementById('yemekTercihi').value;
+            const araba = document.querySelector('input[name="araba"]:checked')?.value || "Belirtilmedi";
+            const alerji = document.getElementById('alerji').value || "Yok";
+            const giyim = document.getElementById('giyim').value;
+
+            // PDF Şablonuna yazdır
+            document.getElementById('pdf-yemek').innerText = yemek;
+            document.getElementById('pdf-araba').innerText = araba;
+            document.getElementById('pdf-alerji').innerText = alerji;
+            document.getElementById('pdf-giyim').innerText = giyim;
+
+            // PDF Seçenekleri
+            const element = document.getElementById('pdf-template');
+            element.classList.remove('hidden'); // PDF alırken görünür yapmalıyız
+
+            const opt = {
+                margin:       10,
+                filename:     'Eda_Yemek_Plani.pdf',
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2 },
+                jsPDF:        { unit: 'mm', format: 'a5', orientation: 'portrait' } // Şık dursun diye A5 boyutu
+            };
+
+            // PDF üret ve indir
+            html2pdf().set(opt).from(element).save().then(() => {
+                element.classList.add('hidden'); // Tekrar gizle
+                alert('Harika! Plan PDF olarak indirildi. Bunu WhatsApp üzerinden benimle paylaşabilirsiniz.');
+            });
+        }
+    </script>
+</body>
+</html>
